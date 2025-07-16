@@ -1,103 +1,168 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import jsPDF from 'jspdf';
+
+const testDuration = 300;
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [userInput, setUserInput] = useState('');
+  const [testText, setTestText] = useState('');
+  const [rawParagraph, setRawParagraph] = useState('');
+  const [started, setStarted] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(testDuration);
+  const [wpm, setWpm] = useState(0);
+  const [accuracy, setAccuracy] = useState(100);
+  const hiddenInputRef = useRef<HTMLInputElement>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  useEffect(() => {
+    if (started && timeLeft > 0 && !finished) {
+      const timer = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+    if (timeLeft === 0 && !finished) finishTest();
+  }, [started, timeLeft, finished]);
+
+  const cleanText = (text: string) => {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const startTest = () => {
+    const cleaned = cleanText(rawParagraph);
+    if (!cleaned) return alert('Please enter a valid paragraph (letters only)');
+    setTestText(cleaned);
+    setUserInput('');
+    setStarted(true);
+    setFinished(false);
+    setTimeLeft(testDuration);
+    setTimeout(() => {
+      hiddenInputRef.current?.focus();
+    }, 100);
+  };
+
+  const finishTest = () => {
+    setFinished(true);
+    const words = userInput.trim().split(/\s+/).filter((w) => w).length;
+    const correct = userInput
+      .split('')
+      .filter((ch, i) => ch === testText[i]).length;
+    const totalTyped = userInput.length;
+    const duration = (testDuration - timeLeft) / 60;
+
+    setWpm(duration > 0 ? Math.round(words / duration) : 0);
+    setAccuracy(totalTyped > 0 ? Math.round((correct / totalTyped) * 100) : 100);
+  };
+
+  const reset = () => {
+    setRawParagraph('');
+    setUserInput('');
+    setTestText('');
+    setStarted(false);
+    setFinished(false);
+    setTimeLeft(testDuration);
+    setWpm(0);
+    setAccuracy(100);
+  };
+
+  const saveAsPDF = () => {
+    const doc = new jsPDF();
+    doc.text(userInput || 'No text typed.', 10, 10, { maxWidth: 190 });
+    doc.save('typed-result.pdf');
+  };
+
+  const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!started || finished) return;
+    const clean = e.target.value.toLowerCase().replace(/[^a-z\s]/g, '');
+    setUserInput(clean);
+  };
+
+  const getCharClass = (char: string, index: number) => {
+    if (index >= userInput.length) return 'text-gray-500';
+    if (userInput[index] === char) return 'text-green-400';
+    return 'text-red-400';
+  };
+
+  return (
+    <main
+      className="min-h-screen bg-black text-white flex items-center justify-center px-6"
+      onClick={() => hiddenInputRef.current?.focus()}
+    >
+      {!started ? (
+        <div className="w-full max-w-3xl text-center">
+          <textarea
+            className="w-full h-40 p-4 rounded bg-gray-800 text-white resize-none focus:outline-none mb-4"
+            placeholder="Paste or type your paragraph here (letters only)..."
+            value={rawParagraph}
+            onChange={(e) => setRawParagraph(e.target.value)}
+          />
+          <button
+            onClick={startTest}
+            className="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded font-semibold"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            Start Typing Test
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      ) : !finished ? (
+        <div
+          className="relative p-4 text-xl font-mono leading-relaxed bg-black focus:outline-none cursor-text w-full max-w-4xl"
+          onClick={() => hiddenInputRef.current?.focus()}
+          style={{ whiteSpace: 'pre-wrap' }}
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+          {testText.split('').map((char, i) => {
+            const isCursor = i === userInput.length;
+
+            return (
+              <React.Fragment key={i}>
+                {isCursor && (
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      width: '2px',
+                      height: '1em',
+                      backgroundColor: 'white',
+                      marginRight: '2px',
+                      position: 'relative',
+                      top: 2,
+                    }}
+                  />
+                )}
+                <span className={`${getCharClass(char, i)}`}>{char}</span>
+              </React.Fragment>
+            );
+          })}
+
+          <input
+            ref={hiddenInputRef}
+            type="text"
+            value={userInput}
+            onChange={handleTyping}
+            className="absolute opacity-0 pointer-events-none"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        </div>
+      ) : (
+        <div className="text-center space-y-4">
+          <p className="text-green-400 font-bold text-xl">✅ Test Complete</p>
+          <p className="text-white">WPM: {wpm} | Accuracy: {accuracy}%</p>
+          <button
+            onClick={saveAsPDF}
+            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded font-semibold"
+          >
+            Save as PDF
+          </button>
+          <button
+            onClick={reset}
+            className="block w-full mt-4 py-2 bg-gray-700 hover:bg-gray-800 rounded font-semibold"
+          >
+            Restart / New Test
+          </button>
+        </div>
+      )}
+    </main>
   );
 }
+//oroginal code 

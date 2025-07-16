@@ -1,0 +1,43 @@
+@font-face {
+  font-family: 'Fira Mono';
+  src: url('https://fonts.gstatic.com/s/firamono/v10/N0bX2SlFPv1weGeLZDtgJv7S.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+}
+
+.monkeytype-font {
+  font-family: 'Fira Mono', monospace;
+}
+
+.caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background-color: #facc15; /* yellow-400 */
+  animation: blink 1s step-start infinite;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.text-muted {
+  color: #4b5563; /* gray-600 */
+}
+
+.bg-background {
+  background-color: #111827; /* gray-900 */
+}
+
+.text-foreground {
+  color: #f9fafb; /* gray-50 */
+}
+
+.border-muted {
+  border-color: #374151; /* gray-700 */
+}
